@@ -8,7 +8,9 @@
 services:
   audiocrowd:
     container_name: audiocrowd
-    build: ..
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     ports:
       - "7760:7860"
     env_file:
