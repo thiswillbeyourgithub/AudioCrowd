@@ -13,6 +13,8 @@ A collaborative Gradio web UI where multiple volunteers record themselves speaki
 - **Skip & discard**: skip unwanted sentences or discard mispronounced recordings
 - **Bilingual UI**: English and French, auto-detected from browser or forced via config
 
+![](./docs/screenshot.png)
+
 ## Keyboard shortcuts
 
 | Key | Action |
