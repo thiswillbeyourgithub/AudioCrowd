@@ -2,7 +2,7 @@ author
 
 recordings
 
-env_file
+docker/env_file
 __pycache__
 *.log
 

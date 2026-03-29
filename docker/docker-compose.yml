@@ -7,7 +7,7 @@
 # Recordings are saved to ./recordings/ on the host by default.
 services:
   audiocrowd:
-    build: .
+    build: ..
     ports:
       - "7760:7860"
     env_file:

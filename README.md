@@ -50,6 +50,7 @@ uv run AudioCrowd.py sentences.jsonl \
 ### With Docker
 
 ```bash
+cd ./docker
 cp env_file.example env_file
 # Edit env_file with your settings (JSONL_PATH, USERS_CSV, etc.)
 docker compose up --build
