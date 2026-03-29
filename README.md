@@ -87,7 +87,7 @@ WAV files are saved as `{userid}_{uuid4[:8]}.wav` in the output directory. The J
 
 ## License
 
-TODO
+[AGPLv3](./LICENSE)
 
 ---
 
