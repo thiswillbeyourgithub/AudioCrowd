@@ -1,0 +1,10 @@
+author
+
+recordings
+
+env_file
+__pycache__
+*.log
+
+TODO.md
+CLAUDE.md

@@ -1,0 +1,26 @@
+# AudioDatasetRecorder configuration.
+# Copy to `env_file` and edit. See `uv run app.py --help` for full details.
+
+# (required) Path to the input JSONL file with sentences.
+JSONL_PATH=/data/val.json
+
+# (required) CSV file with username,password rows (no header).
+USERS_CSV=/data/users.csv
+
+# Directory where WAV recordings are saved.
+OUTPUT_DIR=/app/recordings/wavs
+
+# Output JSONL manifest path.
+# OUTPUT_JSONL=/app/recordings/dataset.jsonl
+
+# Salt used for hashing user IDs.
+# SALT=audiorec
+
+# Gradio server port.
+# PORT=7860
+
+# Set to 1 to create a public Gradio share link.
+# SHARE=
+
+# Force UI language (en or fr). Auto-detects from browser if unset.
+# LANG_OVERRIDE=fr

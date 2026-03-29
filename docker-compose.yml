@@ -1,0 +1,23 @@
+# Launch the AudioCrowd Gradio app.
+# Usage:
+#   cp env_file.example env_file   # edit with your settings
+#   docker compose up --build
+#
+# Mount your dataset directory and pass config via env_file.
+# Recordings are saved to ./recordings/ on the host by default.
+services:
+  audiocrowd:
+    build: .
+    ports:
+      - "7760:7860"
+    env_file:
+      - env_file
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      # Mount the dataset so the app can read audio files and the JSONL manifest.
+      - ./:/data
+      # Persist recordings on the host.
+      - ./recordings:/app/recordings
+      # get the log file
+      - ./logs/:/app/logs
