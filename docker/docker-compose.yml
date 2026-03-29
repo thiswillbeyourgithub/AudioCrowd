@@ -19,8 +19,8 @@ services:
       - no-new-privileges:true
     volumes:
       # Mount the dataset so the app can read audio files and the JSONL manifest.
-      - ./:/data
+      - ../:/data
       # Persist recordings on the host.
-      - ./recordings:/app/recordings
+      - ../recordings:/app/recordings
       # get the log file
-      - ./logs/:/app/logs
+      - ../logs/:/app/logs
