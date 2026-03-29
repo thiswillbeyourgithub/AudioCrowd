@@ -7,6 +7,7 @@
 # Recordings are saved to ./recordings/ on the host by default.
 services:
   audiocrowd:
+    container_name: audiocrowd
     build: ..
     ports:
       - "7760:7860"
