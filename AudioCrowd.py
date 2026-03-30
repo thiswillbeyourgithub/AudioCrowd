@@ -882,20 +882,19 @@ def build_ui(
         return *_display(username), None
 
     def on_recording_stop(
-        audio_path: str | None, request: gr.Request,
-    ) -> tuple[str, str | None, None]:
-        """Handle recording stop: always save and advance to the next sentence.
+        audio_path: str | None, auto_advance: bool, request: gr.Request,
+    ) -> tuple[str, str | None, None, gr.update]:
+        """Handle recording stop: always save; advance to the next sentence only if auto_advance is True.
 
-        Recordings are saved automatically when the user stops recording,
-        removing the need for a manual save button. If the user mispronounced,
-        they can flag the recording or use the Restart button before stopping.
+        When auto_advance is False, the saved recording is kept visible and a
+        "Next" button appears so the user can manually move on.
         """
         t0 = time.time()
         username = _get_username(request)
 
         if audio_path is None:
             logger.warning("Recording stopped but Gradio returned None for '{}'", username)
-            return *_display(username), None
+            return *_display(username), None, gr.update(visible=False)
 
         p = Path(audio_path)
         file_size = p.stat().st_size if p.exists() else 0
@@ -905,10 +904,30 @@ def build_ui(
             username, audio_path, file_size, t_handler_start - t0,
         )
 
-        # Always auto-save on recording stop.
-        result = save_recording(audio_path=audio_path, request=request)
+        # Capture current sentence text before reassignment (for frozen display).
+        session = _get_or_create_session(username)
+        assigned = session["assigned"]
+        if assigned:
+            current_text = sentences[assigned[session["cursor"]]]["text"]
+        else:
+            current_text = ""
+
+        # Always save on recording stop.
+        sentence_display, ref_audio_update, mic_clear = save_recording(audio_path=audio_path, request=request)
         logger.info("on_recording_stop total handler took {:.3f}s for '{}'", time.time() - t0, username)
-        return result
+
+        if auto_advance:
+            return sentence_display, ref_audio_update, mic_clear, gr.update(visible=False)
+        else:
+            # Keep showing current sentence (now saved); reveal the Next button.
+            frozen_sentence = f"<h2 style='line-height:1.6'>{current_text}</h2>"
+            return frozen_sentence, gr.update(visible=False), mic_clear, gr.update(visible=True)
+
+    def advance_to_next(request: gr.Request) -> tuple[str, str | None, None, gr.update]:
+        """Manually advance to the next sentence (used when auto_advance is off)."""
+        username = _get_username(request)
+        sentence_display, ref_audio_update = _display(username)
+        return sentence_display, ref_audio_update, None, gr.update(visible=False)
 
     # ── Custom JS for keyboard shortcuts ──────────────────────────────────
     shortcuts_js = """
@@ -1035,7 +1054,8 @@ def build_ui(
             "btn_flag": "🚩 Flag current sample (F)",
             "btn_flag_prev": "🚩 Flag previous sample (G)",
             "ref_audio_label": "Reference audio (original)",
-            "auto_record_label": "Auto-start recording after each save",
+            "auto_record_label": "Auto-advance to next sentence after each save",
+            "btn_next": "Next sentence ▶",
     }
     translations["fr"] = {
             "app_title": "# 🎙️ AudioCrowd\n### Enregistreur Collaboratif de Jeux de Données Audio",
@@ -1072,7 +1092,8 @@ def build_ui(
             "btn_flag": "🚩 Signaler l'échantillon actuel (F)",
             "btn_flag_prev": "🚩 Signaler l'échantillon précédent (G)",
             "ref_audio_label": "Audio de référence (original)",
-            "auto_record_label": "Démarrer l'enregistrement automatiquement après chaque sauvegarde",
+            "auto_record_label": "Passer automatiquement à la phrase suivante après chaque sauvegarde",
+            "btn_next": "Phrase suivante ▶",
     }
 
     # When --lang is set, force that language for all locales
@@ -1140,6 +1161,8 @@ def build_ui(
             elem_id="auto-record-checkbox",
         )
 
+        next_btn = gr.Button(i18n("btn_next"), elem_id="btn-next", visible=False)
+
         # Status line for flag feedback messages.
         action_status = gr.Markdown(value="")
 
@@ -1153,6 +1176,7 @@ def build_ui(
         )
 
         outputs = [sentence, ref_audio, mic]
+        outputs_with_next = [sentence, ref_audio, mic, next_btn]
 
         # Skip: release current sentence claim and move to next.
         skip_btn.click(
@@ -1183,13 +1207,20 @@ def build_ui(
             outputs=[action_status],
         )
 
-        # Recording auto-saves on stop and auto-starts the next recording.
+        # Recording auto-saves on stop. Advances automatically only if checkbox is checked.
         # If the user mispronounced, they can flag the recording.
         mic.stop_recording(
             fn=on_recording_stop,
-            inputs=[mic],
-            outputs=outputs,
+            inputs=[mic, auto_record_cb],
+            outputs=outputs_with_next,
         ).then(fn=None, js=auto_record_after_stop_js)
+
+        # Manual advance when auto-advance is off.
+        next_btn.click(
+            fn=advance_to_next,
+            inputs=None,
+            outputs=outputs_with_next,
+        )
 
         # Register keyboard shortcuts.
         demo.load(fn=None, inputs=None, outputs=None, js=shortcuts_js)
