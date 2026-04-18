@@ -88,6 +88,12 @@ WAV files are saved as `{userid}_{uuid4[:8]}.wav` in the output directory. The J
 - **soundfile + numpy** for audio processing
 - **fcntl.flock** for cross-process file locking (concurrent multi-user safety)
 
+## Alternatives
+
+If you need a more full-featured, production-ready crowdsourcing platform, consider [Mozilla Common Voice](https://commonvoice.mozilla.org/fr/speak) — an open-source initiative for collecting speech data in many languages. It can also be self-hosted via its [Docker Compose setup](https://github.com/common-voice/common-voice/blob/main/docker-compose.yaml).
+
+AudioCrowd is intentionally simpler: a single-file app for quickly spinning up a private recording session with a specific sentence list and a known group of volunteers.
+
 ## License
 
 [AGPLv3](./LICENSE)
