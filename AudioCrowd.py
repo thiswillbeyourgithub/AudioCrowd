@@ -635,7 +635,8 @@ def build_ui(
     output_dir.mkdir(parents=True, exist_ok=True)
     total_sentences = len(sentences)
     claims_path = output_dir / "claims.json"
-    lock_path = output_dir / ".lock"
+    claims_lock_path = output_dir / ".claims.lock"
+    jsonl_lock_path = output_dir / ".jsonl.lock"
 
     # Per-user session state: {username: {"assigned": [indices], "cursor": int}}
     # Protected by a threading lock since Gradio callbacks run in threads.
@@ -654,7 +655,7 @@ def build_ui(
                     username=username,
                     total_sentences=total_sentences,
                     claims_path=claims_path,
-                    lock_path=lock_path,
+                    lock_path=claims_lock_path,
                     output_jsonl=output_jsonl,
                 )
                 user_sessions[username] = {
@@ -727,7 +728,7 @@ def build_ui(
         username = _get_username(request)
         userid = make_userid(username=username, salt=salt)
 
-        with file_lock(lock_path):
+        with file_lock(jsonl_lock_path):
             if not output_jsonl.exists():
                 return "⚠️ Nothing to flag."
 
@@ -807,7 +808,7 @@ def build_ui(
                 text=text,
                 userid=userid,
                 output_jsonl=output_jsonl,
-                lock_path=lock_path,
+                lock_path=jsonl_lock_path,
             ),
             daemon=True,
         ).start()
@@ -822,7 +823,7 @@ def build_ui(
             sentence_index=sentence_index,
             total_sentences=total_sentences,
             claims_path=claims_path,
-            lock_path=lock_path,
+            lock_path=claims_lock_path,
             output_jsonl=output_jsonl,
             completed_cache=completed_cache,
         )
@@ -866,7 +867,7 @@ def build_ui(
             sentence_index=sentence_index,
             total_sentences=total_sentences,
             claims_path=claims_path,
-            lock_path=lock_path,
+            lock_path=claims_lock_path,
             output_jsonl=output_jsonl,
         )
 
@@ -947,13 +948,28 @@ def build_ui(
                 if (btn) btn.click();
             } else if (e.code === 'KeyR') {
                 e.preventDefault();
-                // Pause (not stop) to avoid triggering auto-save, then clear.
-                const pauseBtn = mic.querySelector('button.pause-button');
-                if (pauseBtn) pauseBtn.click();
-                setTimeout(() => {
-                    const clearBtn = mic.querySelector('button[aria-label="Clear"]');
-                    if (clearBtn) clearBtn.click();
-                }, 100);
+                const pauseBtn2  = mic.querySelector('button.pause-button');
+                const recordBtn2 = mic.querySelector('button.record-button');
+                const clearBtn2  = mic.querySelector('button[aria-label="Clear"]');
+                if (pauseBtn2) {
+                    pauseBtn2.click();
+                    setTimeout(() => {
+                        const cb = mic.querySelector('button[aria-label="Clear"]');
+                        if (cb) cb.click();
+                        setTimeout(() => {
+                            const rb = mic.querySelector('button.record-button');
+                            if (rb) rb.click();
+                        }, 200);
+                    }, 100);
+                } else if (clearBtn2 && !recordBtn2) {
+                    clearBtn2.click();
+                    setTimeout(() => {
+                        const rb = mic.querySelector('button.record-button');
+                        if (rb) rb.click();
+                    }, 200);
+                } else if (recordBtn2) {
+                    recordBtn2.click();
+                }
             } else if (e.code === 'KeyS') {
                 e.preventDefault();
                 document.querySelector('#btn-skip')?.click();
@@ -976,17 +992,31 @@ def build_ui(
     () => {
         const mic = document.querySelector('#mic-input');
         if (!mic) return;
-        // Pause first to avoid triggering stop_recording (which auto-saves).
-        const pauseBtn = mic.querySelector('button.pause-button');
-        if (pauseBtn) pauseBtn.click();
-        setTimeout(() => {
-            const clearBtn = mic.querySelector('button[aria-label="Clear"]');
-            if (clearBtn) clearBtn.click();
+        const pauseBtn  = mic.querySelector('button.pause-button');
+        const recordBtn = mic.querySelector('button.record-button');
+        const clearBtn  = mic.querySelector('button[aria-label="Clear"]');
+        if (pauseBtn) {
+            // Actively recording: pause (avoids triggering stop_recording auto-save), clear, re-record.
+            pauseBtn.click();
             setTimeout(() => {
-                const recordBtn = mic.querySelector('button.record-button');
-                if (recordBtn) recordBtn.click();
+                const cb = mic.querySelector('button[aria-label="Clear"]');
+                if (cb) cb.click();
+                setTimeout(() => {
+                    const rb = mic.querySelector('button.record-button');
+                    if (rb) rb.click();
+                }, 200);
+            }, 100);
+        } else if (clearBtn && !recordBtn) {
+            // Stopped with audio present: clear then record.
+            clearBtn.click();
+            setTimeout(() => {
+                const rb = mic.querySelector('button.record-button');
+                if (rb) rb.click();
             }, 200);
-        }, 100);
+        } else if (recordBtn) {
+            // Idle: just start recording.
+            recordBtn.click();
+        }
     }
     """
 
@@ -1051,10 +1081,10 @@ def build_ui(
             "mic_label": "Your recording (Space to toggle, R to reset)",
             "btn_skip": "⏭️ Skip",
             "btn_restart": "🔄 Restart (R)",
-            "btn_flag": "🚩 Flag current sample (F)",
-            "btn_flag_prev": "🚩 Flag previous sample (G)",
+            "btn_flag": "🚩 Flag last recording (F)",
+            "btn_flag_prev": "🚩 Flag second-to-last recording (G)",
             "ref_audio_label": "Reference audio (original)",
-            "auto_record_label": "Auto-advance to next sentence after each save",
+            "auto_record_label": "Auto-advance and auto-start recording after each save",
             "btn_next": "Next sentence ▶",
     }
     translations["fr"] = {
@@ -1089,10 +1119,10 @@ def build_ui(
             "mic_label": "Votre enregistrement (Espace pour démarrer/arrêter, R pour réinitialiser)",
             "btn_skip": "⏭️ Passer",
             "btn_restart": "🔄 Recommencer (R)",
-            "btn_flag": "🚩 Signaler l'échantillon actuel (F)",
-            "btn_flag_prev": "🚩 Signaler l'échantillon précédent (G)",
+            "btn_flag": "🚩 Signaler le dernier enregistrement (F)",
+            "btn_flag_prev": "🚩 Signaler l'avant-dernier enregistrement (G)",
             "ref_audio_label": "Audio de référence (original)",
-            "auto_record_label": "Passer automatiquement à la phrase suivante après chaque sauvegarde",
+            "auto_record_label": "Passer à la phrase suivante et démarrer l'enregistrement automatiquement après chaque sauvegarde",
             "btn_next": "Phrase suivante ▶",
     }
 
