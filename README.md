@@ -1,5 +1,14 @@
 # AudioCrowd
 
+> ⚠️ **WARNING — project unreliable, no longer used**
+>
+> AudioCrowd ended up being unreliable in practice. I have switched to **my own fork** of Mozilla Common Voice, with my upstream changes to make self-hosting easier:
+> **https://github.com/thiswillbeyourgithub/common-voice/tree/enh-self-hosting**
+>
+> (Note: this is *my personal fork* — `thiswillbeyourgithub/common-voice`, branch `enh-self-hosting` — not the official Mozilla repo.)
+>
+> This repository is left here for reference but is **not recommended** for new deployments.
+
 A collaborative Gradio web UI where multiple volunteers record themselves speaking sentences to build an ASR (Automatic Speech Recognition) fine-tuning dataset.
 
 ## Features
